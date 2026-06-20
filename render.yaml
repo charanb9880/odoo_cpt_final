@@ -15,8 +15,6 @@ services:
         sync: false
       - key: JWT_SECRET
         sync: false
-      - key: GOOGLE_CLIENT_ID
-        sync: false
       - key: BREVO_API_KEY
         sync: false
       - key: FRONTEND_URL
@@ -51,11 +49,6 @@ services:
           type: web
           name: pos-backend
           envVarKey: RENDER_EXTERNAL_URL
-      - key: VITE_GOOGLE_CLIENT_ID
-        fromService:
-          type: web
-          name: pos-backend
-          envVarKey: GOOGLE_CLIENT_ID
     routes:
       - type: redirect
         source: /
