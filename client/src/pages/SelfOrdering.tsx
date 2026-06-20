@@ -116,9 +116,9 @@ export default function SelfOrdering() {
     return rawLink;
   };
 
-  const handleRazorpayCheckout = async () => {
+  const handleRazorpayCheckout = async (methodType: "card" | "upi") => {
     try {
-      const loadingToastId = toast.loading("Initializing secure card payment...");
+      const loadingToastId = toast.loading(`Initializing secure ${methodType === "card" ? "card" : "UPI"} payment...`);
       const orderRes = await createRazorpayOrder({ amount: finalTotal }).unwrap();
       toast.dismiss(loadingToastId);
 
@@ -146,7 +146,7 @@ export default function SelfOrdering() {
             toast.dismiss(verifyToastId);
             if (verifyRes.success) {
               toast.success("Payment successful!");
-              await handlePlaceOrder("card");
+              await handlePlaceOrder(methodType);
             } else {
               toast.error(verifyRes.message || "Payment verification failed.");
             }
@@ -159,6 +159,7 @@ export default function SelfOrdering() {
           name: guestCustomer?.name || "",
           email: guestCustomer?.email || customerEmail || "",
           contact: guestCustomer?.phone || customerPhone || "",
+          method: methodType,
         },
         notes: {
           tableNumber: selectedTable?.number,
@@ -1363,8 +1364,9 @@ export default function SelfOrdering() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                {[
-                 { id: "upi", name: "Digital UPI", desc: "Instant mobile transfer", icon: Zap },
-                 { id: "card", name: "Credit/Debit", desc: "Global card processing", icon: LayoutGrid },
+                 { id: "upi_app", name: "UPI App (Razorpay)", desc: "Pay directly via GPay/PhonePe", icon: Zap },
+                 { id: "upi_qr", name: "UPI QR Scan", desc: "Scan code to transfer", icon: QrCode },
+                 { id: "card", name: "Credit/Debit", desc: "Razorpay card checkout", icon: LayoutGrid },
                  { id: "cash", name: "Cash on Table", desc: "Physical currency", icon: DollarSign },
                  { id: "digital", name: "Odoo Wallet", desc: "System credit balance", icon: Package }
                ].map((method) => (
@@ -1372,9 +1374,11 @@ export default function SelfOrdering() {
                   key={method.id}
                   onClick={() => {
                     if (method.id === "card") {
-                      handleRazorpayCheckout();
-                    } else if (method.id === "upi" || method.id === "digital") {
-                      setSelectedPaymentMethod(method.id);
+                      handleRazorpayCheckout("card");
+                    } else if (method.id === "upi_app") {
+                      handleRazorpayCheckout("upi");
+                    } else if (method.id === "upi_qr" || method.id === "digital") {
+                      setSelectedPaymentMethod(method.id === "upi_qr" ? "upi" : "digital");
                       setPaymentTimer(150); // 2 mins 30 secs
                       setShowPaymentQrModal(true);
                       setShowMobileQr(false); // Reset QR display state
