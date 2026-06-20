@@ -346,7 +346,7 @@ export default function FloorManagement() {
                                              <div className="absolute -bottom-3 -right-3 w-6 h-6 border-2 border-deep-black bg-golden-yellow"></div>
                                              
                                              <img 
-                                                src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${window.location.origin}/s/${table.selfOrderToken}`} 
+                                                src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${window.location.origin}/app/s/${table.selfOrderToken}`} 
                                                 alt="Table QR" 
                                                 className="w-44 h-44 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] border-2 border-deep-black"
                                              />
@@ -355,13 +355,13 @@ export default function FloorManagement() {
                                              <button 
                                                 className="w-full h-14 bg-deep-black text-warm-white font-black uppercase hover:bg-golden-yellow hover:text-deep-black border-2 border-deep-black transition-all"
                                                 onClick={() => {
-                                                   window.open(`${window.location.origin}/s/${table.selfOrderToken}`, '_blank');
+                                                   window.open(`${window.location.origin}/app/s/${table.selfOrderToken}`, '_blank');
                                                 }}
                                              >
                                                  OPEN_PORTAL
                                              </button>
                                              <a 
-                                                href={`https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=${window.location.origin}/s/${table.selfOrderToken}`}
+                                                href={`https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=${window.location.origin}/app/s/${table.selfOrderToken}`}
                                                 download={`table-${table.number}-qr.png`}
                                                 className="w-full h-14 bg-white text-deep-black font-black uppercase hover:bg-gray-100 border-2 border-deep-black transition-all flex items-center justify-center text-center"
                                              >
