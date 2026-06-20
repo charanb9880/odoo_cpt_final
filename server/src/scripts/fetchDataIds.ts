@@ -1,8 +1,8 @@
 
 import mongoose from "mongoose";
 import dotenv from "dotenv";
-import Product from "../models/Product";
-import Category from "../models/Category";
+import { Product } from "../models/Product";
+import { Category } from "../models/Category";
 import { connectDB } from "../config/db";
 
 dotenv.config();

@@ -199,10 +199,11 @@ export const searchProducts = async (req: Request, res: Response) => {
 export const getProductsByCategory = async (req: Request, res: Response) => {
   try {
     const { categoryId } = req.params;
-    const category = await Category.findById(categoryId).populate("items");
+    const category = await Category.findById(categoryId);
     if (!category) return handleError(res, "Category not found", null, 404);
 
-    res.json({ success: true, data: category.items });
+    const products = await Product.find({ category: categoryId }).populate("category", "name");
+    res.json({ success: true, data: products });
   } catch (error) {
     handleError(res, "Error fetching products by category", error);
   }

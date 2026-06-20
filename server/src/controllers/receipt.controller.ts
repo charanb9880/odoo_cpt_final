@@ -10,8 +10,8 @@ dotenv.config();
 // Generate receipt PDF
 export const generateReceiptPDF = async (orderId: string) => {
   const order = await Order.findById(orderId)
-    .populate("customer", "name email")
-    .populate("employee", "name")
+    .populate("customerId", "name email")
+    .populate("employeeId", "name")
     .populate("items.product");
 
   if (!order) throw new Error("Order not found");
@@ -45,8 +45,8 @@ export const generateReceiptPDF = async (orderId: string) => {
   doc
     .text(`Order Number: ${order.orderNumber || (order as any).customOrderID || order._id}`)
     .text(`Date: ${new Date(order.createdAt).toLocaleString()}`)
-    .text(`Customer: ${(order.customer as any)?.name || "Walk-in"}`)
-    .text(`Employee: ${(order.employee as any)?.name || "N/A"}`)
+    .text(`Customer: ${(order.customerId as any)?.name || "Walk-in"}`)
+    .text(`Employee: ${(order.employeeId as any)?.name || "N/A"}`)
     .moveDown(1);
 
   // Items
@@ -102,10 +102,10 @@ export const emailReceipt = async (req: Request, res: Response) => {
   try {
     const { orderId, recipientEmail } = req.body;
 
-    const order = await Order.findById(orderId).populate("customer", "email");
+    const order = await Order.findById(orderId).populate("customerId", "email");
     if (!order) return res.status(404).json({ success: false, message: "Order not found" });
 
-    const email = recipientEmail || (order.customer as any)?.email;
+    const email = recipientEmail || (order.customerId as any)?.email;
     if (!email) {
       return res.status(400).json({
         success: false,

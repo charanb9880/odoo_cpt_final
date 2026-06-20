@@ -48,7 +48,8 @@ app.use(
       if (
         allowedOrigins.includes(origin) ||
         origin.endsWith(".ngrok-free.dev") ||
-        origin.endsWith(".ngrok.io")
+        origin.endsWith(".ngrok.io") ||
+        origin.endsWith(".onrender.com")
       ) {
         return callback(null, true);
       }
@@ -65,7 +66,8 @@ export const io = new Server(server, {
       if (
         allowedOrigins.includes(origin) ||
         origin.endsWith(".ngrok-free.dev") ||
-        origin.endsWith(".ngrok.io")
+        origin.endsWith(".ngrok.io") ||
+        origin.endsWith(".onrender.com")
       ) {
         return callback(null, true);
       }
