@@ -217,6 +217,7 @@ export const getOrders = async (req: Request, res: Response) => {
 
     const orders = await Order.find(query)
       .populate("table")
+      .populate("responsibleStaff")
       .populate({
         path: "items.product",
         select: "-imageUrl",
@@ -268,6 +269,7 @@ export const getOrderById = async (req: Request, res: Response) => {
     const { id } = req.params;
     const order = await Order.findById(id)
       .populate("items.product")
+      .populate("responsibleStaff")
       .populate("table");
 
     if (!order)

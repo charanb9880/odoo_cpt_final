@@ -484,6 +484,7 @@ const OrdersDashboard = () => {
                       </h4>
                       <p className="font-mono text-[9px] uppercase tracking-tight text-muted-foreground mt-2">
                         {order.table?.name || order.tableId?.name || "TAKEAWAY"}
+                        {order.responsibleStaff && ` · WAITER: ${(order.responsibleStaff as any).name || order.responsibleStaff}`}
                       </p>
                     </div>
                     <div className={cn("px-3 py-1 font-mono text-[9px] font-black uppercase text-white border-b-2 border-black/20", sc.bg)}>
@@ -711,6 +712,9 @@ const OrdersDashboard = () => {
                             Status: {activeOrder.table.status?.toUpperCase()}
                           </p>
                         </>
+                      )}
+                      {activeOrder.responsibleStaff && (
+                        <p className="font-mono text-[10px] uppercase text-deep-black">Waiter: <span className="font-black">{(activeOrder.responsibleStaff as any).name || activeOrder.responsibleStaff}</span></p>
                       )}
                       <p className="font-mono text-[10px] uppercase text-deep-black">Date: <span className="font-black">{new Date(activeOrder.createdAt).toLocaleDateString("en-US", { day: "numeric", month: "long", year: "numeric" })}</span></p>
                     </div>
