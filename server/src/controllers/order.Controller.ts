@@ -241,17 +241,10 @@ export const getOrders = async (req: Request, res: Response) => {
       return o;
     }));
 
-    // Re-sort by priority score for active orders
-    const sortedOrders = ordersWithPriority.sort((a: any, b: any) => {
-      if (a.status === "ready" && b.status !== "ready") return 1;
-      if (b.status === "ready" && a.status !== "ready") return -1;
-      return (b.priorityScore || 0) - (a.priorityScore || 0);
-    });
-
     const total = await Order.countDocuments(query);
 
     return res.json({
-      data: sortedOrders,
+      data: ordersWithPriority,
       pagination: {
         total,
         page: Number(page),

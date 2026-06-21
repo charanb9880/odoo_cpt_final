@@ -91,35 +91,26 @@ const OrdersDashboard = () => {
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [status, setStatus] = useState<"draft" | "pending" | "preparing" | "ready" | "served" | "cancelled" | "paid" | "">("");
   const today = new Date();
-  const localToday = today.toLocaleDateString("en-CA", { timeZone: "Asia/Dhaka" });
+  const year = today.getFullYear();
+  const month = String(today.getMonth() + 1).padStart(2, "0");
+  const day = String(today.getDate()).padStart(2, "0");
+  const localToday = `${year}-${month}-${day}`; // Local browser date in YYYY-MM-DD
+  
   const [startDate, setStartDate] = useState<string>(localToday);
   const [endDate, setEndDate] = useState<string>(localToday);
-  const start = new Date(`${startDate}T00:00:00+06:00`).toISOString();
-  const end = new Date(`${endDate}T23:59:59+06:00`).toISOString();
+  const [searchQuery, setSearchQuery] = useState<string>("");
 
-  const [query, setQuery] = useState<{
-    page: number;
-    limit: number;
-    status: "draft" | "pending" | "preparing" | "ready" | "served" | "cancelled" | "paid" | "";
-    startDate: string;
-    endDate: string;
-    orderId?: string;
-  }>({
-    page: 1,
-    limit: 20,
-    status: "",
-    startDate: start,
-    endDate: end,
-  });
+  const start = new Date(`${startDate}T00:00:00`).toISOString();
+  const end = new Date(`${endDate}T23:59:59`).toISOString();
 
   const { data: response, isLoading, isError, isFetching, refetch } = useGetOrdersQuery(
     {
-      page: query.page,
-      limit: query.limit,
-      status: query.status || undefined,
-      startDate: query.startDate || undefined,
-      endDate: query.endDate || undefined,
-      orderId: query.orderId,
+      page,
+      limit,
+      status: status || undefined,
+      startDate: start || undefined,
+      endDate: end || undefined,
+      orderId: searchQuery || undefined,
     },
     { refetchOnMountOrArgChange: true }
   ) as {
@@ -174,20 +165,13 @@ const OrdersDashboard = () => {
   };
 
   const handleSearch = () => {
-    setQuery({
-      page: 1,
-      limit,
-      status,
-      startDate: start,
-      endDate: end,
-      ...(searchTerm ? { orderId: searchTerm } : {}),
-    });
+    setPage(1);
+    setSearchQuery(searchTerm);
   };
 
   const goToPage = (p: number) => {
     if (p < 1 || p > totalPages) return;
     setPage(p);
-    setQuery((prev) => ({ ...prev, page: p }));
   };
 
   const handleEditDraftOrder = (order: any) => {
