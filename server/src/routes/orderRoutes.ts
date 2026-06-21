@@ -17,19 +17,12 @@ import {
   getOrderReport,
 } from "../controllers/orderReport.Controller";
 import { authMiddleware } from "../middleware/authMiddleware";
-import { createRazorpayOrder, verifyRazorpayPayment } from "../controllers/payment.controller";
 
 const router = Router();
 
 // @route   POST /api/orders
 // Allow public access for customer self-ordering
 router.post("/", createOrder);
-
-// @route   POST /api/orders/razorpay/create
-router.post("/razorpay/create", createRazorpayOrder);
-
-// @route   POST /api/orders/razorpay/verify
-router.post("/razorpay/verify", verifyRazorpayPayment);
 
 // @route   GET /api/orders
 router.get("/", authMiddleware, getOrders);

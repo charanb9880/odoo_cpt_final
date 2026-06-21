@@ -260,20 +260,6 @@ export const orderApi = createApi({
       }),
       invalidatesTags: ["Orders", "Summary"],
     }),
-    createRazorpayOrder: builder.mutation<{ success: boolean; orderId: string; amount: number; keyId: string }, { amount: number }>({
-      query: (body) => ({
-        url: "/razorpay/create",
-        method: "POST",
-        body,
-      }),
-    }),
-    verifyRazorpayPayment: builder.mutation<{ success: boolean; message: string }, { razorpay_order_id: string; razorpay_payment_id: string; razorpay_signature: string }>({
-      query: (body) => ({
-        url: "/razorpay/verify",
-        method: "POST",
-        body,
-      }),
-    }),
   }),
 });
 
@@ -289,6 +275,4 @@ export const {
   useGetSalesByDateRangeQuery,
   useUpdateItemStatusMutation,
   useConfirmDraftOrderMutation,
-  useCreateRazorpayOrderMutation,
-  useVerifyRazorpayPaymentMutation,
 } = orderApi;

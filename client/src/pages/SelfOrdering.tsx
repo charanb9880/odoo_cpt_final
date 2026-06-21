@@ -7,7 +7,7 @@ import { useGetFloorsQuery } from "@/services/floorApi";
 import { useGetTablesQuery, useGetTableByTokenQuery } from "@/services/tableApi";
 import { useGetProductsQuery } from "@/services/productApi";
 import { useGetCategoriesQuery } from "@/services/categoryApi";
-import { useCreateOrderMutation, useUpdateOrderMutation, useCreateRazorpayOrderMutation, useVerifyRazorpayPaymentMutation } from "@/services/orderApi";
+import { useCreateOrderMutation, useUpdateOrderMutation } from "@/services/orderApi";
 import { Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -74,132 +74,6 @@ export default function SelfOrdering() {
   const [paymentTimer, setPaymentTimer] = useState(150); // 2m 30s = 150s
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<string | null>(null);
   const [isVerifyingPayment, setIsVerifyingPayment] = useState(false);
-  const [showMobileQr, setShowMobileQr] = useState(false);
-
-  const [createRazorpayOrder] = useCreateRazorpayOrderMutation();
-  const [verifyRazorpayPayment] = useVerifyRazorpayPaymentMutation();
-
-  const isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-
-  const getUpiDeepLink = (app: string) => {
-    const rawLink = `upi://pay?pa=${upiId}&pn=${encodeURIComponent(businessName)}&am=${finalTotal.toFixed(2)}&cu=INR&tn=${encodeURIComponent(`Table ${selectedTable?.number} Self-Order`)}`;
-    const isAndroid = /Android/i.test(navigator.userAgent);
-    const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
-
-    if (isAndroid) {
-      switch (app) {
-        case "gpay":
-          return `intent://pay?pa=${upiId}&pn=${encodeURIComponent(businessName)}&am=${finalTotal.toFixed(2)}&cu=INR&tn=${encodeURIComponent(`Table ${selectedTable?.number} Self-Order`)}#Intent;scheme=upi;package=com.google.android.apps.nitas;end`;
-        case "phonepe":
-          return `intent://pay?pa=${upiId}&pn=${encodeURIComponent(businessName)}&am=${finalTotal.toFixed(2)}&cu=INR&tn=${encodeURIComponent(`Table ${selectedTable?.number} Self-Order`)}#Intent;scheme=upi;package=com.phonepe.app;end`;
-        case "paytm":
-          return `intent://pay?pa=${upiId}&pn=${encodeURIComponent(businessName)}&am=${finalTotal.toFixed(2)}&cu=INR&tn=${encodeURIComponent(`Table ${selectedTable?.number} Self-Order`)}#Intent;scheme=upi;package=net.one97.paytm;end`;
-        case "bhim":
-          return `intent://pay?pa=${upiId}&pn=${encodeURIComponent(businessName)}&am=${finalTotal.toFixed(2)}&cu=INR&tn=${encodeURIComponent(`Table ${selectedTable?.number} Self-Order`)}#Intent;scheme=upi;package=in.org.npci.upiapp;end`;
-        default:
-          return rawLink;
-      }
-    } else if (isIOS) {
-      switch (app) {
-        case "gpay":
-          return `gpay://upi/pay?pa=${upiId}&pn=${encodeURIComponent(businessName)}&am=${finalTotal.toFixed(2)}&cu=INR&tn=${encodeURIComponent(`Table ${selectedTable?.number} Self-Order`)}`;
-        case "phonepe":
-          return `phonepe://upi/pay?pa=${upiId}&pn=${encodeURIComponent(businessName)}&am=${finalTotal.toFixed(2)}&cu=INR&tn=${encodeURIComponent(`Table ${selectedTable?.number} Self-Order`)}`;
-        case "paytm":
-          return `paytmmp://upi/pay?pa=${upiId}&pn=${encodeURIComponent(businessName)}&am=${finalTotal.toFixed(2)}&cu=INR&tn=${encodeURIComponent(`Table ${selectedTable?.number} Self-Order`)}`;
-        case "bhim":
-          return `bhim://upi/pay?pa=${upiId}&pn=${encodeURIComponent(businessName)}&am=${finalTotal.toFixed(2)}&cu=INR&tn=${encodeURIComponent(`Table ${selectedTable?.number} Self-Order`)}`;
-        default:
-          return rawLink;
-      }
-    }
-    return rawLink;
-  };
-
-  const handleRazorpayCheckout = async (methodType: "card" | "upi") => {
-    try {
-      const loadingToastId = toast.loading(`Initializing secure ${methodType === "card" ? "card" : "UPI"} payment...`);
-      const orderRes = await createRazorpayOrder({ amount: finalTotal }).unwrap();
-      toast.dismiss(loadingToastId);
-
-      if (!orderRes.success || !orderRes.orderId) {
-        toast.error("Failed to initialize payment gateway.");
-        return;
-      }
-
-      // High-fidelity Mock Demo Fallback for placeholder/empty keys
-      if (orderRes.keyId === "rzp_test_placeholderKeyId" || !orderRes.keyId || orderRes.keyId.includes("placeholder")) {
-        toast.success("🔑 Running in Payment Demo Mode");
-        const mockSuccess = window.confirm(
-          `Demo Payment Mode Active\n\nWould you like to simulate a successful ${methodType === "card" ? "Card" : "UPI"} payment?\n\n(Click OK for success simulation, Cancel for failure simulation)`
-        );
-        if (mockSuccess) {
-          const verifyToastId = toast.loading("Simulating secure payment verification...");
-          await new Promise((resolve) => setTimeout(resolve, 1500));
-          toast.dismiss(verifyToastId);
-          toast.success("Demo payment verified successfully!");
-          await handlePlaceOrder(methodType);
-        } else {
-          toast.error("Payment failed / cancelled in Demo Mode.");
-        }
-        return;
-      }
-
-      const options = {
-        key: orderRes.keyId,
-        amount: orderRes.amount,
-        currency: "INR",
-        name: businessName,
-        description: `Table ${selectedTable?.number} Self-Order`,
-        order_id: orderRes.orderId,
-        handler: async function (response: any) {
-          const verifyToastId = toast.loading("Verifying payment signature...");
-          try {
-            const verifyRes = await verifyRazorpayPayment({
-              razorpay_order_id: response.razorpay_order_id,
-              razorpay_payment_id: response.razorpay_payment_id,
-              razorpay_signature: response.razorpay_signature
-            }).unwrap();
-            
-            toast.dismiss(verifyToastId);
-            if (verifyRes.success) {
-              toast.success("Payment successful!");
-              await handlePlaceOrder(methodType);
-            } else {
-              toast.error(verifyRes.message || "Payment verification failed.");
-            }
-          } catch (verifyErr: any) {
-            toast.dismiss(verifyToastId);
-            toast.error(verifyErr?.data?.message || "Verification failed. Please contact staff.");
-          }
-        },
-        prefill: {
-          name: guestCustomer?.name || "",
-          email: guestCustomer?.email || customerEmail || "",
-          contact: guestCustomer?.phone || customerPhone || "",
-          method: methodType,
-        },
-        notes: {
-          tableNumber: selectedTable?.number,
-          floorName: selectedFloor?.name,
-        },
-        theme: {
-          color: "#F5B400",
-        },
-        modal: {
-          ondismiss: function() {
-            toast.error("Payment cancelled.");
-          }
-        }
-      };
-
-      const rzp = new (window as any).Razorpay(options);
-      rzp.open();
-    } catch (err: any) {
-      console.error("Razorpay initiation error:", err);
-      toast.error(err?.data?.message || "Could not connect to payment gateway. Please try again.");
-    }
-  };
 
   const startScanner = () => {
     setIsScanning(true);
@@ -1382,24 +1256,18 @@ export default function SelfOrdering() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                {[
-                 { id: "upi_app", name: "UPI App (Razorpay)", desc: "Pay directly via GPay/PhonePe", icon: Zap },
-                 { id: "upi_qr", name: "UPI QR Scan", desc: "Scan code to transfer", icon: QrCode },
-                 { id: "card", name: "Credit/Debit", desc: "Razorpay card checkout", icon: LayoutGrid },
+                 { id: "upi", name: "Digital UPI", desc: "Instant mobile transfer", icon: Zap },
+                 { id: "card", name: "Credit/Debit", desc: "Global card processing", icon: LayoutGrid },
                  { id: "cash", name: "Cash on Table", desc: "Physical currency", icon: DollarSign },
                  { id: "digital", name: "Odoo Wallet", desc: "System credit balance", icon: Package }
                ].map((method) => (
                  <Card 
                   key={method.id}
                   onClick={() => {
-                    if (method.id === "card") {
-                      handleRazorpayCheckout("card");
-                    } else if (method.id === "upi_app") {
-                      handleRazorpayCheckout("upi");
-                    } else if (method.id === "upi_qr" || method.id === "digital") {
-                      setSelectedPaymentMethod(method.id === "upi_qr" ? "upi" : "digital");
+                    if (method.id === "upi" || method.id === "card" || method.id === "digital") {
+                      setSelectedPaymentMethod(method.id);
                       setPaymentTimer(150); // 2 mins 30 secs
                       setShowPaymentQrModal(true);
-                      setShowMobileQr(false); // Reset QR display state
                     } else {
                       handlePlaceOrder(method.id);
                     }
@@ -1621,82 +1489,18 @@ export default function SelfOrdering() {
               </p>
             </div>
 
-            {/* UPI Apps Selection for Mobile */}
-            {selectedPaymentMethod === "upi" && isMobileDevice && (
-              <div className="space-y-4 mb-6">
-                <p className="font-mono text-[9px] uppercase tracking-widest text-center text-gray-500 font-black">
-                  Choose UPI App to pay INR {finalTotal.toFixed(2)}
-                </p>
-                <div className="grid grid-cols-2 gap-3">
-                  <a
-                    href={getUpiDeepLink("gpay")}
-                    className="flex items-center justify-center gap-2 py-4 border-2 border-deep-black bg-white hover:bg-blue-50 font-black italic text-xs uppercase shadow-[3px_3px_0px_0px_rgba(66,133,244,0.3)] hover:shadow-none hover:translate-x-0.5 hover:translate-y-0.5 transition-all text-center text-deep-black"
-                  >
-                    Google Pay
-                  </a>
-                  <a
-                    href={getUpiDeepLink("phonepe")}
-                    className="flex items-center justify-center gap-2 py-4 border-2 border-deep-black bg-white hover:bg-purple-50 font-black italic text-xs uppercase shadow-[3px_3px_0px_0px_rgba(95,37,159,0.3)] hover:shadow-none hover:translate-x-0.5 hover:translate-y-0.5 transition-all text-center text-deep-black"
-                  >
-                    PhonePe
-                  </a>
-                  <a
-                    href={getUpiDeepLink("paytm")}
-                    className="flex items-center justify-center gap-2 py-4 border-2 border-deep-black bg-white hover:bg-cyan-50 font-black italic text-xs uppercase shadow-[3px_3px_0px_0px_rgba(0,185,245,0.3)] hover:shadow-none hover:translate-x-0.5 hover:translate-y-0.5 transition-all text-center text-deep-black"
-                  >
-                    Paytm
-                  </a>
-                  <a
-                    href={getUpiDeepLink("bhim")}
-                    className="flex items-center justify-center gap-2 py-4 border-2 border-deep-black bg-white hover:bg-green-50 font-black italic text-xs uppercase shadow-[3px_3px_0px_0px_rgba(227,110,38,0.3)] hover:shadow-none hover:translate-x-0.5 hover:translate-y-0.5 transition-all text-center text-deep-black"
-                  >
-                    BHIM UPI
-                  </a>
-                </div>
-                <a
-                  href={getUpiDeepLink("generic")}
-                  className="flex items-center justify-center gap-2 w-full py-4 border-2 border-deep-black bg-deep-black text-white hover:bg-golden-yellow hover:text-deep-black font-black italic text-xs uppercase shadow-[3px_3px_0px_0px_rgba(245,180,0,0.3)] hover:shadow-none hover:translate-x-0.5 hover:translate-y-0.5 transition-all text-center"
-                >
-                  ⚡ Pay via Any UPI App
-                </a>
-              </div>
-            )}
-
-            {/* Dynamic QR Code Display / Collapsible on Mobile */}
-            {selectedPaymentMethod === "upi" && isMobileDevice ? (
-              <div className="space-y-3">
-                <button
-                  type="button"
-                  onClick={() => setShowMobileQr((prev) => !prev)}
-                  className="w-full text-center py-2 font-mono text-[9px] uppercase tracking-widest text-gray-500 border border-dashed border-gray-300 hover:border-deep-black transition-colors"
-                >
-                  {showMobileQr ? "Hide QR Code" : "Show QR Code instead"}
-                </button>
-                {showMobileQr && (
-                  <div className="border-4 border-deep-black bg-white relative overflow-hidden aspect-square flex items-center justify-center p-6 shadow-[4px_4px_0px_0px_rgba(0,0,0,0.1)] transition-all">
-                    <img 
-                      src={`https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(
-                        `upi://pay?pa=${upiId}&pn=${encodeURIComponent(businessName)}&am=${finalTotal.toFixed(2)}&cu=INR&tn=${encodeURIComponent(`Table ${selectedTable?.number} Self-Order`)}`
-                      )}`} 
-                      alt="Payment QR Code" 
-                      className="w-full h-full object-contain"
-                    />
-                  </div>
-                )}
-              </div>
-            ) : (
-              <div className="border-4 border-deep-black bg-white relative overflow-hidden aspect-square flex items-center justify-center p-6 shadow-[4px_4px_0px_0px_rgba(0,0,0,0.1)]">
-                <img 
-                  src={`https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(
-                    selectedPaymentMethod === "upi" 
-                      ? `upi://pay?pa=${upiId}&pn=${encodeURIComponent(businessName)}&am=${finalTotal.toFixed(2)}&cu=INR&tn=${encodeURIComponent(`Table ${selectedTable?.number} Self-Order`)}`
-                      : `https://checkout.odoopos.com/pay/${selectedPaymentMethod}?amount=${finalTotal.toFixed(2)}&table=${selectedTable?.number}`
-                  )}`} 
-                  alt="Payment QR Code" 
-                  className="w-full h-full object-contain"
-                />
-              </div>
-            )}
+            {/* Dynamic QR Code Display */}
+            <div className="border-4 border-deep-black bg-white relative overflow-hidden aspect-square flex items-center justify-center p-6 shadow-[4px_4px_0px_0px_rgba(0,0,0,0.1)]">
+              <img 
+                src={`https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(
+                  selectedPaymentMethod === "upi" 
+                    ? `upi://pay?pa=${upiId}&pn=${encodeURIComponent(businessName)}&am=${finalTotal.toFixed(2)}&cu=INR&tn=${encodeURIComponent(`Table ${selectedTable?.number} Self-Order`)}`
+                    : `https://checkout.odoopos.com/pay/${selectedPaymentMethod}?amount=${finalTotal.toFixed(2)}&table=${selectedTable?.number}`
+                )}`} 
+                alt="Payment QR Code" 
+                className="w-full h-full object-contain"
+              />
+            </div>
 
             <div className="space-y-4 mt-6">
               <div className="flex justify-between items-center text-xs font-mono uppercase bg-gray-50 p-3 border-2 border-deep-black">
