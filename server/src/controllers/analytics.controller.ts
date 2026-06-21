@@ -19,10 +19,12 @@ const getDateFilter = (filter: string, startDate?: string, endDate?: string) => 
   let end = new Date();
 
   switch (filter) {
+    case "daily":
     case "today":
       start.setHours(0, 0, 0, 0);
       end.setHours(23, 59, 59, 999);
       break;
+    case "weekly":
     case "this-week":
       const day = now.getDay();
       const diff = now.getDate() - day + (day === 0 ? -6 : 1); // adjust when day is sunday
@@ -31,6 +33,7 @@ const getDateFilter = (filter: string, startDate?: string, endDate?: string) => 
       end = new Date();
       end.setHours(23, 59, 59, 999);
       break;
+    case "monthly":
     case "this-month":
       start = new Date(now.getFullYear(), now.getMonth(), 1);
       start.setHours(0, 0, 0, 0);

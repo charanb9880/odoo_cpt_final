@@ -21,17 +21,20 @@ const seedAnalytics = async () => {
     console.log("🗑️ Cleared existing orders and sessions");
 
     // 2. Ensure we have staff/cashiers
-    let users = await User.find({ role: { $in: ["admin", "staff", "waiter"] } });
+    let users = await User.find({ role: { $in: ["admin", "staff", "waiter", "cashier"] } });
     if (users.length < 3) {
       const hashedPassword = await bcrypt.hash("password123", 10);
       const newUsers = await User.insertMany([
-        { name: "John Cashier", email: "john@cafe.com", password: hashedPassword, role: "admin", isActive: true },
-        { name: "Sarah Waiter", email: "sarah@cafe.com", password: hashedPassword, role: "staff", isActive: true },
-        { name: "Mike Waiter", email: "mike@cafe.com", password: hashedPassword, role: "staff", isActive: true },
+        { name: "John Cashier", email: "john@cafe.com", passwordHash: hashedPassword, role: "admin", active: true, isApproved: true },
+        { name: "Sarah Waiter", email: "sarah@cafe.com", passwordHash: hashedPassword, role: "waiter", active: true, isApproved: true },
+        { name: "Mike Waiter", email: "mike@cafe.com", passwordHash: hashedPassword, role: "waiter", active: true, isApproved: true },
       ]);
       users = [...users, ...newUsers];
       console.log("👤 Created fake staff users");
     }
+
+    const waiters = users.filter(u => u.role === "waiter" || u.role === "staff");
+    const cashiers = users.filter(u => u.role === "cashier" || u.role === "admin");
 
     const products = await Product.find();
     const tables = await Table.find();
@@ -44,14 +47,16 @@ const seedAnalytics = async () => {
     const now = new Date();
     const orders = [];
     const sessions = [];
+    let orderCounter = 1001;
 
     // Generate data for the last 30 days
     for (let i = 0; i < 30; i++) {
       const date = new Date();
       date.setDate(now.getDate() - i);
       
-      // Each user has one session per day
-      for (const user of users) {
+      // Each cashier/admin user has one session per day
+      const activeCashiers = cashiers.length > 0 ? cashiers : users;
+      for (const cashierUser of activeCashiers) {
         const startTime = new Date(date);
         startTime.setHours(8 + Math.floor(Math.random() * 2), 0, 0);
         
@@ -59,7 +64,8 @@ const seedAnalytics = async () => {
         endTime.setHours(20 + Math.floor(Math.random() * 4), 0, 0);
 
         const session = new Session({
-          user: user._id,
+          cashier: cashierUser._id,
+          user: cashierUser._id,
           startTime,
           endTime,
           startingBalance: 1000,
@@ -96,20 +102,28 @@ const seedAnalytics = async () => {
             orderTotal += price * qty;
           }
 
+          // Random prep time between 5 and 25 minutes
+          const prepMinutes = 5 + Math.random() * 20;
+          const orderTimeUpdatedAt = new Date(orderTime.getTime() + prepMinutes * 60000);
+
+          const randomWaiter = waiters.length > 0 ? waiters[Math.floor(Math.random() * waiters.length)] : cashierUser;
+          const randomStatus = ["completed", "completed", "completed", "served", "ready"][Math.floor(Math.random() * 5)];
+
           const order = new Order({
             customOrderID: `ORD-${orderTime.getTime()}-${Math.floor(Math.random() * 10000)}`,
+            orderNumber: `ORD${orderCounter++}`,
             items: orderItems,
             totalPrice: orderTotal,
             discountPercent: 0,
             taxRate: 5,
-            status: "completed",
+            status: randomStatus,
             paymentMethod: ["cash", "card", "upi"][Math.floor(Math.random() * 3)],
             table: tables[Math.floor(Math.random() * tables.length)]._id,
             sessionId: session._id,
-            responsibleStaff: users[Math.floor(Math.random() * users.length)]._id,
-            cashierId: user._id,
+            responsibleStaff: randomWaiter._id,
+            cashierId: cashierUser._id,
             createdAt: orderTime,
-            updatedAt: new Date(orderTime.getTime() + 15 * 60000), // 15 mins later
+            updatedAt: orderTimeUpdatedAt,
           });
 
           orders.push(order);
@@ -123,8 +137,8 @@ const seedAnalytics = async () => {
     }
 
     console.log(`📦 Inserting ${sessions.length} sessions and ${orders.length} orders...`);
-    await Session.insertMany(sessions);
-    await Order.insertMany(orders);
+    await Session.insertMany(sessions, { timestamps: false });
+    await Order.insertMany(orders, { timestamps: false });
 
     console.log("🌱 Analytics data seeded successfully!");
     await disconnectDB();
