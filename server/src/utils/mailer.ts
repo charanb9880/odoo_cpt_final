@@ -248,3 +248,65 @@ export const sendWelcomeBackEmail = async (
     return false;
   }
 };
+
+// ─── Send Order Receipt Email ──────────────────────────────────────────────────
+export const sendReceiptEmail = async (
+  to: string,
+  orderNumber: string,
+  pdfBuffer: Buffer,
+  orderId: string
+): Promise<boolean> => {
+  try {
+    const base64Pdf = pdfBuffer.toString('base64');
+    await axios.post(
+      BREVO_API_URL,
+      {
+        sender: SENDER,
+        to: [{ email: to }],
+        subject: `☕ Receipt for Order ${orderNumber || orderId} — Odoo POS Cafe`,
+        htmlContent: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; background: #0A0A0A; border-radius: 8px; overflow: hidden;">
+            <!-- Header -->
+            <div style="padding: 32px 40px; border-bottom: 6px solid #F5B400;">
+              <h1 style="margin: 0; font-size: 26px; font-style: italic; font-weight: 900; color: #ffffff; text-transform: uppercase;">
+                ODOO POS <span style="color: #F5B400;">CAFE</span>
+              </h1>
+              <p style="font-family: monospace; font-size: 10px; color: #888; margin: 6px 0 0; text-transform: uppercase; letter-spacing: 3px;">Order Receipt Protocol</p>
+            </div>
+            <!-- Body -->
+            <div style="padding: 40px; background: #ffffff; color: #0A0A0A;">
+              <h2 style="font-size: 28px; font-weight: 900; font-style: italic; margin: 0 0 20px; text-transform: uppercase;">Thank You For Your Order!</h2>
+              <p style="font-size: 14px; color: #333; line-height: 1.7; margin: 0 0 24px;">
+                We hope you had a wonderful experience at <strong>Odoo POS Cafe</strong>. 
+                Your digital receipt has been generated and is attached to this email as a PDF.
+              </p>
+              <div style="background: #0A0A0A; padding: 20px; text-align: center; margin: 24px 0; border: 4px solid #F5B400;">
+                <p style="font-family: monospace; font-size: 10px; text-transform: uppercase; letter-spacing: 3px; color: #888; margin: 0 0 8px;">Order Reference</p>
+                <span style="font-size: 20px; font-weight: 900; color: #F5B400; font-family: monospace;">#${orderNumber || orderId}</span>
+              </div>
+              <p style="font-size: 12px; color: #777;">If you have any questions or feedback, feel free to reply directly to this email or reach out to us at the counter.</p>
+            </div>
+            <!-- Footer -->
+            <div style="background: #0A0A0A; padding: 18px 40px;">
+              <p style="font-family: monospace; font-size: 9px; color: #444; text-transform: uppercase; letter-spacing: 2px; margin: 0;">© Odoo POS Cafe — Automated Receipt Delivery System</p>
+            </div>
+          </div>
+        `,
+        attachment: [
+          {
+            content: base64Pdf,
+            name: `receipt-${orderNumber || orderId}.pdf`
+          }
+        ]
+      },
+      { headers: getBrevoHeaders() }
+    );
+
+    console.log(`[Mailer] Receipt email sent to ${to} via Brevo ✅`);
+    return true;
+  } catch (err: any) {
+    console.error('[Mailer] Receipt email error:', err?.response?.data || err?.message);
+    return false;
+  }
+};
+

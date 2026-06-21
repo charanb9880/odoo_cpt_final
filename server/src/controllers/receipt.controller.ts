@@ -4,6 +4,7 @@ import nodemailer from "nodemailer";
 import { Order } from "../models/Order";
 import { User } from "../models/User";
 import dotenv from "dotenv";
+import { sendReceiptEmail } from "../utils/mailer";
 
 dotenv.config();
 
@@ -114,6 +115,19 @@ export const emailReceipt = async (req: Request, res: Response) => {
     }
 
     const pdfBuffer = await generateReceiptPDF(orderId);
+
+    // Try sending using Brevo API if configured
+    if (process.env.BREVO_API_KEY) {
+      const orderNumber = order.orderNumber || (order as any).customOrderID || order._id;
+      const sent = await sendReceiptEmail(email, orderNumber, pdfBuffer, orderId);
+      if (sent) {
+        return res.status(200).json({
+          success: true,
+          message: "Receipt sent successfully via Brevo",
+        });
+      }
+      console.warn("[ReceiptController] Brevo send failed, falling back to SMTP...");
+    }
 
     // Configure nodemailer
     // Use Ethereal for testing (real SMTP would require actual credentials)
