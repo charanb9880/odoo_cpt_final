@@ -213,6 +213,16 @@ export default function SelfOrdering() {
       const currentFloors = (floorsData as any)?.data || [];
       const matchedTable = currentTables.find((t: any) => t.number.toString() === extractedTableNumber);
       if (matchedTable && currentFloors.length > 0) {
+        // Validate table availability before selecting
+        const oneHour = 60 * 60 * 1000;
+        const isOccupied = matchedTable.status === "occupied";
+        const isReserved = matchedTable.lastBookedAt && (Date.now() - new Date(matchedTable.lastBookedAt).getTime() < oneHour);
+        if (isOccupied || isReserved) {
+          toast.error(`Table ${extractedTableNumber} is already occupied or reserved!`);
+          stopScanner();
+          return;
+        }
+
         const floorId = matchedTable.floor?._id || matchedTable.floor;
         const matchedFloor = currentFloors.find((f: any) => f._id?.toString() === floorId?.toString());
         if (matchedFloor) setSelectedFloor(matchedFloor);
@@ -338,6 +348,19 @@ export default function SelfOrdering() {
     if (!tableByTokenData?.data) return;
     if (floors.length === 0) return; // Wait until floors are loaded
     const table = tableByTokenData.data;
+
+    // Check if table is occupied or reserved
+    const oneHour = 60 * 60 * 1000;
+    const isOccupied = table.status === "occupied";
+    const isReserved = table.lastBookedAt && (Date.now() - new Date(table.lastBookedAt).getTime() < oneHour);
+    if (isOccupied || isReserved) {
+      toast.error(`Table ${table.number} is already occupied or reserved! Please select an available table.`);
+      setSelectedTable(null);
+      setShowCustomerForm(false);
+      navigate("/self-order");
+      return;
+    }
+
     const floorId = table.floor?._id || table.floor;
     const floor = floors.find((f: any) => f._id?.toString() === floorId?.toString());
     if (floor) setSelectedFloor(floor);
@@ -352,6 +375,19 @@ export default function SelfOrdering() {
     if (allTables.length === 0 || floors.length === 0) return; // Wait until both loaded
     const table = allTables.find((t: any) => t.number.toString() === tableNumber.toString());
     if (!table) return;
+
+    // Check if table is occupied or reserved
+    const oneHour = 60 * 60 * 1000;
+    const isOccupied = table.status === "occupied";
+    const isReserved = table.lastBookedAt && (Date.now() - new Date(table.lastBookedAt).getTime() < oneHour);
+    if (isOccupied || isReserved) {
+      toast.error(`Table ${table.number} is already occupied or reserved! Please select an available table.`);
+      setSelectedTable(null);
+      setShowCustomerForm(false);
+      navigate("/self-order");
+      return;
+    }
+
     const floorId = table.floor?._id || table.floor;
     const floor = floors.find((f: any) => f._id?.toString() === floorId?.toString());
     if (floor) setSelectedFloor(floor);
@@ -1019,10 +1055,20 @@ export default function SelfOrdering() {
                     return (
                       <Card 
                         key={t._id}
-                        onClick={() => !isUnavailable && setSelectedTable(t)}
-                        className={`cursor-pointer border-4 transition-all p-6 rounded-none shadow-[4px_4px_0px_0px_#000] flex flex-col items-center justify-center gap-2 
-                          ${selectedTable?._id === t._id ? 'bg-deep-black text-white border-golden-yellow' : 'bg-white text-deep-black border-deep-black'}
-                          ${isUnavailable ? 'opacity-50 cursor-not-allowed grayscale' : 'hover:translate-x-1 hover:translate-y-1 hover:shadow-none'}
+                        onClick={() => {
+                          if (isUnavailable) {
+                            toast.error(`Table ${t.number} is already occupied or reserved!`);
+                            return;
+                          }
+                          setSelectedTable(t);
+                        }}
+                        className={`cursor-pointer border-4 transition-all p-6 rounded-none flex flex-col items-center justify-center gap-2 
+                          ${isUnavailable 
+                            ? 'bg-gray-100 text-gray-400 border-gray-300 opacity-40 cursor-not-allowed shadow-none' 
+                            : selectedTable?._id === t._id 
+                              ? 'bg-deep-black text-white border-golden-yellow shadow-[4px_4px_0px_0px_#000]' 
+                              : 'bg-white text-deep-black border-deep-black shadow-[4px_4px_0px_0px_#000] hover:translate-x-1 hover:translate-y-1 hover:shadow-none'
+                          }
                         `}
                       >
                         <p className="font-mono text-[8px] uppercase tracking-widest opacity-40">Table</p>
