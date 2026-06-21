@@ -117,7 +117,11 @@ export default function KitchenDisplay() {
           if (exists) return prev.map(o => o._id === newOrder._id ? newOrder : o);
           return sortOrders([newOrder, ...prev]);
         });
-        toast.success("New Order Received!", { icon: "🔔" });
+        if (newOrder.isCustomerOrder) {
+          toast.success(`🛎️ New Self-Order for Table #${newOrder.table?.tableNumber || newOrder.table?.number || "?"}!`, { icon: "🔔", duration: 6000 });
+        } else {
+          toast.success("New Order Received!", { icon: "🔔" });
+        }
         if (audioRef.current) audioRef.current.play().catch(() => { });
       }
     };

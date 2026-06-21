@@ -2,6 +2,7 @@ import { useRef, useState, useEffect, type RefObject } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { useOutsideClick } from "@/hooks/use-outside-click";
 import { socket } from "@/utils/socket";
+import { toast } from "react-hot-toast";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -130,13 +131,18 @@ const OrdersDashboard = () => {
   };
 
   useEffect(() => {
-    socket.on("newOrder", refetch);
+    socket.on("newOrder", (order) => {
+      refetch();
+      if (order?.isCustomerOrder) {
+        toast.success(`🛎️ New Self-Order for Table #${order.table?.tableNumber || order.table?.number || "?"}!`, { duration: 6000 });
+      }
+    });
     socket.on("orderUpdated", refetch);
     socket.on("orderConfirmed", refetch);
     socket.on("itemStatusChanged", refetch);
 
     return () => {
-      socket.off("newOrder", refetch);
+      socket.off("newOrder");
       socket.off("orderUpdated", refetch);
       socket.off("orderConfirmed", refetch);
       socket.off("itemStatusChanged", refetch);

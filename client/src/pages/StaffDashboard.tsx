@@ -37,7 +37,12 @@ export default function StaffDashboard() {
     if (!user?.id) return;
 
     socket.on("orderUpdated", refetch);
-    socket.on("newOrder", refetch);
+    socket.on("newOrder", (order) => {
+       refetch();
+       if (order?.isCustomerOrder) {
+          toast.success(`🛎️ New Self-Order for Table #${order.table?.tableNumber || order.table?.number || "?"}!`, { duration: 6000 });
+       }
+    });
     socket.on("orderConfirmed", refetch);
     socket.on("itemStatusChanged", refetch);
     // Real-time listener for orders drafted for this specific staff
