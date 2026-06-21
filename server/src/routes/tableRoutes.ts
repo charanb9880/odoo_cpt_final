@@ -14,7 +14,7 @@ router.use(authMiddleware);
 router.get("/assigned", getAssignedTables);
 
 router.post("/", adminMiddleware, createTable);
-router.patch("/:id", adminMiddleware, updateTable);
+router.patch("/:id", updateTable);
 router.delete("/:id", adminMiddleware, deleteTable);
 
 export default router;

@@ -4,7 +4,7 @@ import { Order } from "../models/Order";
 import { Table } from "../models/Table";
 import { Types } from "mongoose";
 import { getTodayOrderSummary } from "./orderSummaryService.controller";
-import { io } from "..";
+import { getIO } from "../socket";
 import { Session } from "../models/Session";
 import { AuthRequest } from "../middleware/authMiddleware";
 import jwt from "jsonwebtoken";
@@ -65,7 +65,7 @@ export const createOrder = async (req: AuthRequest, res: Response) => {
 
        // ── CHECK FOR 1-HOUR BOOKING LIMIT ────────────────────────────────
        const oneHour = 60 * 60 * 1000;
-       if (table.lastBookedAt && (Date.now() - new Date(table.lastBookedAt).getTime() < oneHour)) {
+       if (table.status === "occupied" && table.lastBookedAt && (Date.now() - new Date(table.lastBookedAt).getTime() < oneHour)) {
          return res.status(400).json({ 
            success: false, 
            message: "Table is currently reserved and cannot be booked again for at least 1 hour from its last booking." 
@@ -128,15 +128,15 @@ export const createOrder = async (req: AuthRequest, res: Response) => {
     await order.populate("table items.product responsibleStaff");
     
     // Emit to KDS & Staff
-    io.emit("newOrder", order);
+    getIO().emit("newOrder", order);
     // If it's a customer order, it's now 'pending' and KDS will see it via 'newOrder'
     // We also notify the assigned staff if any
     if (order.responsibleStaff) {
-       io.emit(`newDraftOrder:${order.responsibleStaff._id || order.responsibleStaff}`, order);
+       getIO().emit(`newDraftOrder:${order.responsibleStaff._id || order.responsibleStaff}`, order);
     }
     
     const summary = await getTodayOrderSummary();
-    io.emit("orderSummaryUpdate", summary);
+    getIO().emit("orderSummaryUpdate", summary);
 
     // Increment ordersPlaced counter on GuestCustomer (async, non-blocking)
     if (guestCustomerId) {
@@ -169,8 +169,8 @@ export const confirmDraftOrder = async (req: AuthRequest, res: Response) => {
     await order.save();
     await order.populate("table items.product responsibleStaff");
 
-    io.emit("orderConfirmed", order);
-    io.emit("orderUpdated", order);
+    getIO().emit("orderConfirmed", order);
+    getIO().emit("orderUpdated", order);
 
     res.json({ success: true, message: "Order confirmed and sent to kitchen", data: order });
   } catch (error) {
@@ -222,7 +222,7 @@ export const getOrders = async (req: Request, res: Response) => {
         path: "items.product",
         select: "-imageUrl",
       })
-      .sort({ createdAt: -1 })
+      .sort({ createdAt: -1, _id: -1 })
       .skip((Number(page) - 1) * safeLimit)
       .limit(safeLimit);
 
@@ -347,24 +347,22 @@ export const updateOrder = async (req: AuthRequest, res: Response) => {
     if (order.table && ["served", "completed", "cancelled"].includes(order.status) && !["served", "completed", "cancelled"].includes(oldStatus)) {
        const table = await Table.findById(order.table);
        if (table) {
-         const oneHour = 60 * 60 * 1000;
-         const timeSinceBooking = Date.now() - new Date(table.lastBookedAt || 0).getTime();
-         if (timeSinceBooking >= oneHour) {
-            table.status = "free";
-            await table.save();
-         } else {
-            console.log(`[TABLE-LIFECYCLE] Table ${table.number} remains 'occupied' due to 1-hour reservation policy. Remaining: ${Math.round((oneHour - timeSinceBooking) / 60000)}m`);
-         }
+         table.status = "free";
+         await table.save();
+         // Broadcast table updates via Socket.IO
+         getIO().emit("tableUpdated", table);
+         getIO().emit("tableStatusUpdated", { id: table._id, status: "free" });
+         console.log(`[TABLE-LIFECYCLE] Table ${table.number} automatically set to free due to order transitioning to ${order.status}`);
        }
     }
 
     await order.populate("table items.product");
     
     // Notify KDS of update
-    io.emit("orderUpdated", order);
+    getIO().emit("orderUpdated", order);
     
     const summary = await getTodayOrderSummary();
-    io.emit("orderSummaryUpdate", summary);
+    getIO().emit("orderSummaryUpdate", summary);
 
     return res.status(200).json({ success: true, data: order });
   } catch (err: any) {
@@ -465,7 +463,7 @@ export const updateItemStatus = async (req: Request, res: Response) => {
 
     // ── REAL-TIME BROADCAST ──────────────────────────────────────────────────
     // Event 1: granular item-level change (Kitchen / Waiter screens)
-    io.emit("itemStatusChanged", {
+    getIO().emit("itemStatusChanged", {
       orderId: order._id,
       itemId,
       itemStatus,
@@ -473,11 +471,11 @@ export const updateItemStatus = async (req: Request, res: Response) => {
     });
 
     // Event 2: full order update so billing always recalculates from latest state
-    io.emit("orderUpdated", order);
+    getIO().emit("orderUpdated", order);
 
     // Event 3: update today's summary widget on the admin dashboard
     const summary = await getTodayOrderSummary();
-    io.emit("orderSummaryUpdate", summary);
+    getIO().emit("orderSummaryUpdate", summary);
     // ────────────────────────────────────────────────────────────────────────
 
     return res.status(200).json({
@@ -512,7 +510,7 @@ export const cancelOrder = async (req: AuthRequest, res: Response) => {
     await order.save();
     
     const summary = await getTodayOrderSummary();
-    io.emit("orderSummaryUpdate", summary);
+    getIO().emit("orderSummaryUpdate", summary);
 
     return res.status(200).json({ success: true, data: order });
   } catch (err: any) {
@@ -543,7 +541,7 @@ export const searchOrders = async (req: Request, res: Response) => {
       .populate("customerId")
       .populate("employeeId")
       .populate("items.product")
-      .sort({ createdAt: -1 });
+      .sort({ createdAt: -1, _id: -1 });
 
     return res.status(200).json({ success: true, data: orders });
   } catch (err: any) {

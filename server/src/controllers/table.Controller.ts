@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import { Table } from "../models/Table";
 import crypto from "crypto";
+import { getIO } from "../socket";
 
 export const getTables = async (req: Request, res: Response) => {
   try {
@@ -27,6 +28,10 @@ export const createTable = async (req: Request, res: Response) => {
     const table = new Table(req.body);
     await table.save();
     const populated = await table.populate("floor assignedWaiter");
+    
+    // Broadcast creation
+    getIO().emit("tableAdded", populated);
+    
     res.status(201).json({ data: populated });
   } catch (error) {
     res.status(500).json({ message: "Error creating table" });
@@ -47,6 +52,13 @@ export const updateTable = async (req: Request, res: Response) => {
     const table = await Table.findByIdAndUpdate(req.params.id, updateData, { new: true })
       .populate("floor")
       .populate("assignedWaiter");
+
+    if (table) {
+      // Broadcast update
+      getIO().emit("tableUpdated", table);
+      getIO().emit("tableStatusUpdated", { id: table._id, status: table.status });
+    }
+
     res.json({ data: table });
   } catch (error) {
     res.status(500).json({ message: "Error updating table" });
@@ -56,6 +68,10 @@ export const updateTable = async (req: Request, res: Response) => {
 export const deleteTable = async (req: Request, res: Response) => {
   try {
     await Table.findByIdAndDelete(req.params.id);
+    
+    // Broadcast deletion
+    getIO().emit("tableDeleted", req.params.id);
+    
     res.json({ message: "Table deleted" });
   } catch (error) {
     res.status(500).json({ message: "Error deleting table" });

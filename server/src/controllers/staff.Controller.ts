@@ -3,7 +3,7 @@ import { Request, Response } from "express";
 import { Table } from "../models/Table";
 import { Order } from "../models/Order";
 import { User } from "../models/User";
-import { io } from "..";
+import { getIO } from "../socket";
 
 // @desc    Assign Table to Waiter
 // @route   PUT /api/staff/assign-table
@@ -16,7 +16,7 @@ export const assignTableWaiter = async (req: Request, res: Response) => {
     table.assignedWaiter = waiterId || null;
     await table.save();
 
-    io.emit("tableAssigned", { tableId, waiterId });
+    getIO().emit("tableAssigned", { tableId, waiterId });
     return res.status(200).json({ success: true, data: table });
   } catch (err: any) {
     return res.status(500).json({ success: false, message: err.message });

@@ -44,9 +44,7 @@ import { toast } from "react-hot-toast";
 import Swal from "sweetalert2";
 import { DiscountDialog } from "./SetDiscount";
 import { printReceipt } from "@/utils/printReceipt";
-import { io } from "socket.io-client";
-
-const socket = io(import.meta.env.VITE_API_URL || "http://localhost:5001");
+import { socket } from "@/utils/socket";
 
 // ── Theme ────────────────────────────────────────────────────────────────────
 const G_DARK = "#1A2E1A";

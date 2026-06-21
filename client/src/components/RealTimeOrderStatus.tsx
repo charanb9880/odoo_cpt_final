@@ -1,11 +1,9 @@
 import { useEffect, useState } from "react";
-import { io } from "socket.io-client";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton"; // ✅ ShadCN skeleton
 import { useNavigate } from "react-router";
 import axios from "axios";
-
-const socket = io(import.meta.env.VITE_API_URL, { withCredentials: true });
+import { socket } from "@/utils/socket";
 
 export default function OrderSummary() {
   const [summary, setSummary] = useState<any>(null);

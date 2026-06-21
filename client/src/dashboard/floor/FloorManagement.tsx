@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useSelector } from "react-redux";
 import type { RootState } from "@/store";
 import { useGetFloorsQuery, useCreateFloorMutation, useDeleteFloorMutation } from "@/services/floorApi";
 import { useGetTablesQuery, useCreateTableMutation, useUpdateTableMutation, useDeleteTableMutation, useAssignTableWaiterMutation } from "@/services/tableApi";
+import { socket } from "@/utils/socket";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -28,9 +29,28 @@ export default function FloorManagement() {
   const currentUserId = useSelector((state: RootState) => state.user.id);
   const isAdmin = currentUserRole === "admin";
 
-  const { data: floorsData, isLoading: floorsLoading } = useGetFloorsQuery();
-  const { data: tablesData, isLoading: tablesLoading } = useGetTablesQuery();
+  const { data: floorsData, isLoading: floorsLoading, refetch: refetchFloors } = useGetFloorsQuery();
+  const { data: tablesData, isLoading: tablesLoading, refetch: refetchTables } = useGetTablesQuery();
   const { data: staffData } = useGetAllStaffQuery(undefined, { skip: !isAdmin });
+
+  useEffect(() => {
+    const handleUpdate = () => {
+      refetchTables();
+      refetchFloors();
+    };
+
+    socket.on("tableAdded", handleUpdate);
+    socket.on("tableUpdated", handleUpdate);
+    socket.on("tableStatusUpdated", handleUpdate);
+    socket.on("tableDeleted", handleUpdate);
+
+    return () => {
+      socket.off("tableAdded", handleUpdate);
+      socket.off("tableUpdated", handleUpdate);
+      socket.off("tableStatusUpdated", handleUpdate);
+      socket.off("tableDeleted", handleUpdate);
+    };
+  }, [refetchTables, refetchFloors]);
   
   const [createFloor] = useCreateFloorMutation();
   const [deleteFloor] = useDeleteFloorMutation();
@@ -272,9 +292,20 @@ export default function FloorManagement() {
                                          <p className="font-mono text-[8px] uppercase tracking-[0.3em] text-muted-foreground font-black mb-2">Unit_ID</p>
                                          <h4 className="text-5xl font-sans font-black text-deep-black leading-none tracking-tighter">{table.number}</h4>
                                      </div>
-                                     <div className={`px-2 py-1 font-mono text-[10px] font-black uppercase text-white shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] ${table.status === 'free' ? 'bg-green-600' : 'bg-red-600'}`}>
-                                          {table.status}
-                                     </div>
+                                     <div 
+                                           onClick={async () => {
+                                             const newStatus = table.status === "free" ? "occupied" : "free";
+                                             try {
+                                               await updateTable({ id: table._id, body: { status: newStatus } }).unwrap();
+                                               toast.success(`Table ${table.number} set to ${newStatus}`);
+                                             } catch (err) {
+                                               toast.error("Failed to update status");
+                                             }
+                                           }}
+                                           className={`px-2 py-1 font-mono text-[10px] font-black uppercase text-white shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] cursor-pointer hover:scale-105 transition-transform ${table.status === 'free' ? 'bg-green-600' : 'bg-red-600'}`}
+                                      >
+                                           {table.status}
+                                      </div>
                                  </div>
 
                                  <div className="space-y-6 border-t-2 border-deep-black/10 pt-6">

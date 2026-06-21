@@ -216,7 +216,7 @@ export default function SelfOrdering() {
         // Validate table availability before selecting
         const oneHour = 60 * 60 * 1000;
         const isOccupied = matchedTable.status === "occupied";
-        const isReserved = matchedTable.lastBookedAt && (Date.now() - new Date(matchedTable.lastBookedAt).getTime() < oneHour);
+        const isReserved = isOccupied && matchedTable.lastBookedAt && (Date.now() - new Date(matchedTable.lastBookedAt).getTime() < oneHour);
         if (isOccupied || isReserved) {
           toast.error(`Table ${extractedTableNumber} is already occupied or reserved!`);
           stopScanner();
@@ -352,7 +352,7 @@ export default function SelfOrdering() {
     // Check if table is occupied or reserved
     const oneHour = 60 * 60 * 1000;
     const isOccupied = table.status === "occupied";
-    const isReserved = table.lastBookedAt && (Date.now() - new Date(table.lastBookedAt).getTime() < oneHour);
+    const isReserved = isOccupied && table.lastBookedAt && (Date.now() - new Date(table.lastBookedAt).getTime() < oneHour);
     if (isOccupied || isReserved) {
       toast.error(`Table ${table.number} is already occupied or reserved! Please select an available table.`);
       setSelectedTable(null);
@@ -379,7 +379,7 @@ export default function SelfOrdering() {
     // Check if table is occupied or reserved
     const oneHour = 60 * 60 * 1000;
     const isOccupied = table.status === "occupied";
-    const isReserved = table.lastBookedAt && (Date.now() - new Date(table.lastBookedAt).getTime() < oneHour);
+    const isReserved = isOccupied && table.lastBookedAt && (Date.now() - new Date(table.lastBookedAt).getTime() < oneHour);
     if (isOccupied || isReserved) {
       toast.error(`Table ${table.number} is already occupied or reserved! Please select an available table.`);
       setSelectedTable(null);
@@ -1049,7 +1049,7 @@ export default function SelfOrdering() {
                   {filteredTables.map((t: any) => {
                     const oneHour = 60 * 60 * 1000;
                     const isOccupied = t.status === "occupied";
-                    const isReserved = t.lastBookedAt && (Date.now() - new Date(t.lastBookedAt).getTime() < oneHour);
+                    const isReserved = isOccupied && t.lastBookedAt && (Date.now() - new Date(t.lastBookedAt).getTime() < oneHour);
                     const isUnavailable = isOccupied || isReserved;
 
                     return (

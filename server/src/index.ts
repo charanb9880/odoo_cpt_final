@@ -6,6 +6,7 @@ import userRoutes from "./routes/userRoutes";
 import http from "http";
 import morgan from "morgan";
 import { Server } from "socket.io";
+import { setIO } from "./socket";
 import tableRoutes from "./routes/tableRoutes";
 import categoryRoutes from "./routes/categoryRoutes";
 import productRoutes from "./routes/productRoutes";
@@ -76,6 +77,7 @@ export const io = new Server(server, {
     credentials: true,
   },
 });
+setIO(io);
 // Middleware
 app.use(express.json());
 app.use(express.static(path.join(__dirname, "public")));
