@@ -127,6 +127,24 @@ export default function SelfOrdering() {
         return;
       }
 
+      // High-fidelity Mock Demo Fallback for placeholder/empty keys
+      if (orderRes.keyId === "rzp_test_placeholderKeyId" || !orderRes.keyId || orderRes.keyId.includes("placeholder")) {
+        toast.success("🔑 Running in Payment Demo Mode");
+        const mockSuccess = window.confirm(
+          `Demo Payment Mode Active\n\nWould you like to simulate a successful ${methodType === "card" ? "Card" : "UPI"} payment?\n\n(Click OK for success simulation, Cancel for failure simulation)`
+        );
+        if (mockSuccess) {
+          const verifyToastId = toast.loading("Simulating secure payment verification...");
+          await new Promise((resolve) => setTimeout(resolve, 1500));
+          toast.dismiss(verifyToastId);
+          toast.success("Demo payment verified successfully!");
+          await handlePlaceOrder(methodType);
+        } else {
+          toast.error("Payment failed / cancelled in Demo Mode.");
+        }
+        return;
+      }
+
       const options = {
         key: orderRes.keyId,
         amount: orderRes.amount,
