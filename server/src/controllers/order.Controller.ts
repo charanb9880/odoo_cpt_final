@@ -94,7 +94,7 @@ export const createOrder = async (req: AuthRequest, res: Response) => {
       paymentMethod: paymentMethod || "cash",
       table: verifiedTableId,
       tableId: verifiedTableId,
-      status: "draft",
+      status: (isCustomer && paymentMethod === "cash") ? "paid" : "draft",
       isCustomerOrder: isCustomer,
       sessionId: activeSession?._id,
       responsibleStaff: autoStaffId,

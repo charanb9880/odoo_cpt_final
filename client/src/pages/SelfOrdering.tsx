@@ -1377,7 +1377,9 @@ export default function SelfOrdering() {
                <div className="grid grid-cols-2 gap-12 border-t-4 border-deep-black/5 pt-12">
                   <div className="text-left border-l-4 border-golden-yellow pl-6">
                      <p className="font-mono text-[10px] text-gray-400 uppercase tracking-widest mb-2">Live_Status</p>
-                     <p className="text-3xl font-black italic uppercase tracking-tighter text-blue-600">Preparing</p>
+                     <p className="text-3xl font-black italic uppercase tracking-tighter text-blue-600">
+                        {activeOrder?.status || "Preparing"}
+                     </p>
                   </div>
                   <div className="text-right border-r-4 border-golden-yellow pr-6">
                      <p className="font-mono text-[10px] text-gray-400 uppercase tracking-widest mb-2">Wait_Estimate</p>
